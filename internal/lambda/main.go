@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cognitoidentityprovider"
 	"github.com/jtmilanest/cognito-backup/internal/cloud"
 	"github.com/jtmilanest/cognito-backup/internal/config"
 	log "github.com/sirupsen/logrus"
