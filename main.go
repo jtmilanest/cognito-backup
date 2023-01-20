@@ -80,16 +80,24 @@ func main() {
 Sample Payload to execute the Cognito Restore using
 Lambda UI in AWS
 
+e.g.,#1
+{
+  "cognitoUserPoolId": "us-west-2_Xy67PstDj",
+  "cognitoRegion": "us-west-2",
+  "s3BucketName": "test-cognito-backup001",
+  "s3BucketRegion": "us-west-2",
+  "backupPrefix": "platform",
+  "rotationEnabled": false,
+  "rotationDaysLimit": 7
+}
+
+e.g.,#2
 {
   "awsRegion": "us-west-2",
   "cognitoUserPoolId": "us-west-2_Xy67PstDj",
   "cognitoRegion": "us-west-2",
   "s3BucketName": "test-cognito-backup001",
-  "s3BucketRegion": "us-west-2",
-  "backupDirPath": "platform",
-  "restoreUsers": true,
-  "restoreGroups": false, //todo
-  "cleanUpBeforeRestore": true
+  "s3BucketRegion": "us-west-2"
 }
 
 */
