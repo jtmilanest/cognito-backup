@@ -9,20 +9,32 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/jtmilanest/cognito-backup/internal/cloud"
 	"github.com/jtmilanest/cognito-backup/internal/config"
 	log "github.com/sirupsen/logrus"
 )
 
+// Encrypt S3 Data via KMS
+func encryptViaKMS(ctx context.Context, client *cloud.Client, kmsKeyName string, data []byte) (*kms.EncryptOutput, error) {
+	result, err := client.KMSClient.Encrypt(ctx, &kms.EncryptInput{
+		KeyId:     aws.String(kmsKeyName),
+		Plaintext: data,
+	})
+
+	return result, err
+}
+
 // Backup Data to S3
-func uploadToS3(ctx context.Context, client *cloud.Client, bucketName, keyName string, data []byte) error {
+func uploadToS3(ctx context.Context, client *cloud.Client, bucketName, keyName string, data *kms.EncryptOutput) error {
 	_, err := client.S3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:               aws.String(bucketName),
 		Key:                  aws.String(keyName),
 		ACL:                  types.ObjectCannedACLPrivate,
-		Body:                 bytes.NewReader(data),
+		Body:                 bytes.NewReader(data.CiphertextBlob),
 		ContentDisposition:   aws.String("attachment"),
 		ServerSideEncryption: types.ServerSideEncryptionAes256,
 		Tagging:              aws.String(fmt.Sprintf("producer=%v", lambdaAwsTag)),
@@ -77,7 +89,7 @@ func rotateBackups(ctx context.Context, client *cloud.Client, bucketName string,
 
 // Execute Lambda Function
 func Execute(ctx context.Context, config config.ConfigParam) error {
-	client, err := cloud.New(ctx, config.CognitoRegion, config.S3BucketRegion)
+	client, err := cloud.New(ctx, config.CognitoRegion, config.S3BucketRegion, config.KMSRegion)
 	if err != nil {
 		return fmt.Errorf("Could not create AWS client. Error: %w", err)
 	}
@@ -97,7 +109,20 @@ func Execute(ctx context.Context, config config.ConfigParam) error {
 		return fmt.Errorf("Failed to marshal cognito users structure. Error: %w", err)
 	}
 
-	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "users.json"), usersData)
+	encUsersData, err := encryptViaKMS(ctx, client, config.KMSKeyName, usersData)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			fmt.Println(err.Error())
+		}
+		return fmt.Errorf("Failed to encrypt cognito users. Error: %w", err)
+	}
+
+	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "users.json"), encUsersData)
 	if err != nil {
 		return fmt.Errorf("Failed to upload cognito users backup to S3. Error: %w", err)
 	}
@@ -115,7 +140,20 @@ func Execute(ctx context.Context, config config.ConfigParam) error {
 		return fmt.Errorf("Failed to marshal cognito groups structure. Error: %w", err)
 	}
 
-	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "groups.json"), groupsData)
+	encGroupData, err := encryptViaKMS(ctx, client, config.KMSKeyName, groupsData)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			fmt.Println(err.Error())
+		}
+		return fmt.Errorf("Failed to encrypt cognito users. Error: %w", err)
+	}
+
+	err = uploadToS3(ctx, client, config.S3BucketName, getKeyName(config.BackupPrefix, timestamp, "groups.json"), encGroupData)
 	if err != nil {
 		return fmt.Errorf("Failed to upload cognito groups backup to S3. Error: %w", err)
 	}

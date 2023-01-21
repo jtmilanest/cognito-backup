@@ -87,7 +87,9 @@ e.g.,#1
   "s3BucketName": "test-cognito-backup001",
   "s3BucketRegion": "us-west-2",
   "backupPrefix": "platform",
-  "rotationEnabled": false,
+ 	"kmsKeyName": "03799fec-5fae-49ef-bc11-7703238fd713",
+  "kmsRegion": "us-east-1"
+	"rotationEnabled": false,
   "rotationDaysLimit": 7
 }
 
@@ -97,7 +99,9 @@ e.g.,#2
   "cognitoUserPoolId": "us-west-2_Xy67PstDj",
   "cognitoRegion": "us-west-2",
   "s3BucketName": "test-cognito-backup001",
-  "s3BucketRegion": "us-west-2"
+  "s3BucketRegion": "us-west-2",
+	"kmsKeyName": "03799fec-5fae-49ef-bc11-7703238fd713",
+  "kmsRegion": "us-east-1"
 }
 
 */
